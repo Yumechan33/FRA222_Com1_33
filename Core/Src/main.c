@@ -392,7 +392,7 @@ void ButtonMatrixRead()
 
 }
 
-//1. GPIO button to Degree(confuse about value in degreeSum. it not plus + 100. may be about bit. please give hint to me na ka while nong thinking ;-;)
+//1. GPIO button to Degree(confuse about value in degreeSum. it not plus + 100. may be about bit. please give hint to me na ka while me thinking ;-;)
 void SumDegreeButton(){
 	if(micros() - timeStamp >= 100){
 		timeStamp = micros();
