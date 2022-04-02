@@ -1,5 +1,6 @@
 /* USER CODE BEGIN Header */
 /**
+ * test at home(alone with cat)
   ******************************************************************************
   * @file           : main.c
   * @brief          : Main program body
@@ -39,18 +40,28 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim11;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+int16_t _micro = 0; // micro TIM11
+int16_t degreeSum[2] ={0}; //get degree from botton [0] is past [1] is present
+uint16_t Buttonstate =0; //3*3
+uint32_t timeStamp=0;//count time
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM11_Init(void);
 /* USER CODE BEGIN PFP */
-
+void ButtonMatrixRead();
+void SumDegreeButton();
+uint64_t micros();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -87,8 +98,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_TIM3_Init();
+  MX_TIM11_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start_IT(&htim11);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -98,6 +111,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  ButtonMatrixRead();
+	  SumDegreeButton();
   }
   /* USER CODE END 3 */
 }
@@ -123,9 +138,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -140,10 +155,86 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 65535;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
+  * @brief TIM11 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM11_Init(void)
+{
+
+  /* USER CODE BEGIN TIM11_Init 0 */
+
+  /* USER CODE END TIM11_Init 0 */
+
+  /* USER CODE BEGIN TIM11_Init 1 */
+
+  /* USER CODE END TIM11_Init 1 */
+  htim11.Instance = TIM11;
+  htim11.Init.Prescaler = 99;
+  htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim11.Init.Period = 65535;
+  htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim11.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim11) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM11_Init 2 */
+
+  /* USER CODE END TIM11_Init 2 */
+
 }
 
 /**
@@ -195,7 +286,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|L1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(L2_GPIO_Port, L2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(L4_GPIO_Port, L4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -203,16 +300,133 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  /*Configure GPIO pins : LD2_Pin L1_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin|L1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : L2_Pin */
+  GPIO_InitStruct.Pin = L2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(L2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : R1_Pin */
+  GPIO_InitStruct.Pin = R1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(R1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : R2_Pin R3_Pin */
+  GPIO_InitStruct.Pin = R2_Pin|R3_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : L4_Pin */
+  GPIO_InitStruct.Pin = L4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(L4_GPIO_Port, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 4 */
+
+// 5. TIM
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim == &htim11) {
+		_micro += 65535;
+	}
+}
+
+uint64_t micros() {
+	return _micro + htim11.Instance->CNT;
+}
+//END 5.
+
+//For 1. detect Matrix Button
+GPIO_TypeDef* ButtonMatrixPortR[3] = {R1_GPIO_Port,R2_GPIO_Port,R3_GPIO_Port};
+uint16_t ButtonMatrixPinR[3] = {R1_Pin,R2_Pin,R3_Pin};
+
+GPIO_TypeDef* ButtonMatrixPortL[3] = {L1_GPIO_Port,L2_GPIO_Port,L4_GPIO_Port};
+uint16_t ButtonMatrixPinL[3] = {L1_Pin,L2_Pin,L4_Pin};
+
+//detect button 3*3
+void ButtonMatrixRead()
+{
+	//static uint32_t timeStamp=0;
+	static uint8_t CurrentL=0;
+	//call reader every 100 ms
+	if(micros() - timeStamp >= 100)
+	{
+		timeStamp = micros();
+
+		for(int i=0 ;i<3;i++)
+		{
+			if(HAL_GPIO_ReadPin(ButtonMatrixPortR[i], ButtonMatrixPinR[i])==GPIO_PIN_RESET) // Button press
+			{
+				//set bit i to 1
+				//i calculate form i(R) and CurrentL to set bit that relate to 4x4 button
+				Buttonstate |= 1 << (i + (CurrentL*3));
+			}
+			else
+			{
+				//set bit i to 0
+				Buttonstate &= ~(1<< (i + (CurrentL*3)));
+			}
+		}
+		//set currentL to Hi-z (Open drain)
+		HAL_GPIO_WritePin(ButtonMatrixPortL[CurrentL], ButtonMatrixPinL[CurrentL], GPIO_PIN_SET);
+		uint8_t nextL = (CurrentL + 1) % 3;
+		//set NextL	to Low
+		HAL_GPIO_WritePin(ButtonMatrixPortL[nextL], ButtonMatrixPinL[nextL], GPIO_PIN_RESET);
+		CurrentL = nextL;
+
+
+	}
+
+}
+
+//1. GPIO button to Degree(confuse about value in degreeSum. it not plus + 100. may be about bit. please give hint to me na ka while nong thinking ;-;)
+void SumDegreeButton(){
+	if(micros() - timeStamp >= 100){
+		timeStamp = micros();
+		if(Buttonstate == 1){
+			degreeSum[1] += 100;
+		}
+		if(Buttonstate == 2){
+			degreeSum[1] += 10;
+		}
+		if(Buttonstate == 4){
+			degreeSum[1] += 1;
+		}
+		if(Buttonstate == 8){
+			degreeSum[1] -= 100;
+		}
+		if(Buttonstate == 16){
+			degreeSum[1] -= 10;
+		}
+		if(Buttonstate == 32){
+			degreeSum[1] -= 1;
+		}
+		if(Buttonstate == 64){
+			degreeSum[0] += degreeSum[1];
+				// submit sum to motor(QEI not finisd)
+		}
+		if(Buttonstate == 128){
+			degreeSum[1] = 0;
+		}
+		if(Buttonstate == 256){
+			degreeSum[1] = degreeSum[0];
+		}
+	}
+
+}
 
 /* USER CODE END 4 */
 
