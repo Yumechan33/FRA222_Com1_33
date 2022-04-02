@@ -350,6 +350,8 @@ uint64_t micros() {
 //END 5.
 
 //For 1. detect Matrix Button
+//For R use PA9_R1,PC7_R2,PB6_R3
+//L use PA10_L1,PB3_L2,PB5_L4
 GPIO_TypeDef* ButtonMatrixPortR[3] = {R1_GPIO_Port,R2_GPIO_Port,R3_GPIO_Port};
 uint16_t ButtonMatrixPinR[3] = {R1_Pin,R2_Pin,R3_Pin};
 
