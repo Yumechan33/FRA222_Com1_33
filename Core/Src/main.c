@@ -13,7 +13,7 @@
   * This software is licensed under terms that can be found in the LICENSE file
   * in the root directory of this software component.
   * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
+  * time test
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -80,8 +80,6 @@ void ButtonMatrixRead();
 void SumDegreeButton();
 uint64_t micros();
 
-void ADCPollingMethodUpdate();
-void ADCConfigInit();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -605,7 +603,7 @@ void ButtonMatrixRead(){
 
 //1. GPIO button to Degree
 void SumDegreeButton(){
-	//if(micros() - timeStamp >= 20){
+	if(micros() - timeStamp >= 20){
 		if(Buttonstate == 1){
 			degreeSum[1] += 100;
 		}
@@ -634,7 +632,7 @@ void SumDegreeButton(){
 		if(Buttonstate == 256){
 			degreeSum[1] = degreeSum[0];
 		}
-	//}
+	}
 
 }
 
